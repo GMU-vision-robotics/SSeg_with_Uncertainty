@@ -8,8 +8,8 @@ from dataloaders.cityscapes_proposals import CityscapesProposalsDataset
 from metrics import Evaluator
 
 BATCH_SIZE = 32
-rep_style = 'ObjDet' #'both', 'ObjDet', 'SSeg'
-saved_folder = 'trained_model/regular'
+rep_style = 'SSeg' #'both', 'ObjDet', 'SSeg'
+saved_folder = 'trained_model/regular/{}'.format(rep_style)
 
 if rep_style == 'both':
     input_dim = 512
@@ -28,7 +28,7 @@ def train_classifier(train_loader, classifier, criterion, optimizer):
     classifier.train()
     loss_ = 0.0
     epoch_loss = []
-    for i in range(len(train_loader)):
+    for i in range(20):#len(train_loader)):
         images, labels = train_loader[i]
         images, labels = images.to(device), labels.to(device)
 
@@ -47,7 +47,7 @@ def test_classifier(test_loader, classifier, criterion, evaluator):
     with torch.no_grad():
         classifier.eval()
         epoch_loss = []
-        for i in range(len(test_loader)):
+        for i in range(20):#len(test_loader)):
             images, labels = test_loader[i]
             images, labels = images.to(device), labels.to(device)
 
@@ -80,7 +80,7 @@ criterion = nn.CrossEntropyLoss(ignore_index=255).to(device)
 
 import torch.optim as optim
 optimizer = optim.SGD(classifier.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3)
 
 evaluator = Evaluator(num_classes)
 

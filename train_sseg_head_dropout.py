@@ -7,7 +7,7 @@ from sseg_model import DropoutHead
 from dataloaders.cityscapes_proposals import CityscapesProposalsDataset
 from metrics import Evaluator
 
-BATCH_SIZE = 64
+BATCH_SIZE = 32
 rep_style = 'ObjDet' #'both', 'ObjDet', 'SSeg'
 saved_folder = 'trained_model/dropout'
 

@@ -11,7 +11,7 @@ from loss import BinaryCrossEntropyLoss
 BATCH_SIZE = 8
 rep_style = 'ObjDet' #'both', 'ObjDet', 'SSeg'
 saved_folder = 'trained_model/duq'
-duq_l_gradient_penalty = 0.1
+duq_l_gradient_penalty = 0.0
 
 if rep_style == 'both':
     input_dim = 512
