@@ -12,13 +12,11 @@ from torchvision.ops import roi_align
 
 device = torch.device('cuda')
 
-class LostAndFoundProposalsDataset(data.Dataset):
+class RoadAnomalyProposalsDataset(data.Dataset):
 	def __init__(self, dataset_dir, rep_style='both'):
 
 		self.dataset_dir = dataset_dir
 		self.rep_style = rep_style
-
-		self.data_json_file = json.load(open('{}/{}_data_annotation.json'.format(self.dataset_dir, 'Lost_and_Found')))
 
 		self.void_classes = [0, 1, 2, 3, 4, 5, 10, 14, 15, 16, -1]
 		self.valid_classes = [7, 11, 17, 21, 23, 24, 26, 31]
@@ -29,15 +27,15 @@ class LostAndFoundProposalsDataset(data.Dataset):
 		self.NUM_CLASSES = len(self.valid_classes)
 		self.class_map = dict(zip(self.valid_classes, range(self.NUM_CLASSES)))
 
-		print("Found {} images".format(len(self.data_json_file)))
+		print("Found {} images".format(60))
 
 		# proposal, mask feature and sseg feature folder
-		self.proposal_folder = '/scratch/yli44/detectron2/my_projects/Bayesian_MaskRCNN/generated_proposals/lostAndFound'
-		self.mask_ft_folder  = '/scratch/yli44/detectron2/my_projects/Bayesian_MaskRCNN/proposal_mask_features/lostAndFound'
-		self.sseg_ft_folder  = '/projects/kosecka/yimeng/Datasets/Lost_and_Found/deeplab_ft_8_classes'
+		self.proposal_folder = '/scratch/yli44/detectron2/my_projects/Bayesian_MaskRCNN/generated_proposals/roadAnomaly'
+		self.mask_ft_folder  = '/scratch/yli44/detectron2/my_projects/Bayesian_MaskRCNN/proposal_mask_features/roadAnomaly'
+		self.sseg_ft_folder  = '/projects/kosecka/yimeng/Datasets/RoadAnomaly/deeplab_ft_8_classes/'
 
 	def __len__(self):
-		return len(self.data_json_file)
+		return 60
 
 	def encode_segmap(self, mask):
 		#merge ambiguous classes
@@ -65,16 +63,13 @@ class LostAndFoundProposalsDataset(data.Dataset):
 			mask[mask == _validc] = self.class_map[_validc]
 		return mask
 
-	def get_num_proposal(self, i):
-		v = self.data_json_file[str(i)]
-		return len(v['regions'])
-
 	def get_proposal(self, i, j=0):
 		img_path = '{}/{}.png'.format(self.dataset_dir, i)
 		lbl_path = '{}/{}_label.png'.format(self.dataset_dir, i)
 
 		rgb_img = np.array(Image.open(img_path).convert('RGB'))
 		sseg_label = np.array(Image.open(lbl_path), dtype=np.uint8)
+		sseg_label = self.encode_segmap(sseg_label) # 1024 x 2048
 		#print('sseg_label.shape = {}'.format(sseg_label.shape))
 		
 		# read proposals
@@ -83,22 +78,23 @@ class LostAndFoundProposalsDataset(data.Dataset):
 		mask_feature = np.load('{}/{}_proposal_mask_features.npy'.format(self.mask_ft_folder, i), allow_pickle=True)
 		# read sseg features
 		sseg_feature = np.load('{}/{}_deeplab_ft.npy'.format(self.sseg_ft_folder, i), allow_pickle=True) # 256 x 128 x 256
+		_, H, W = sseg_feature.shape
 		#print('sseg_feature.shape = {}'.format(sseg_feature.shape))
 
 		sseg_feature = torch.tensor(sseg_feature).unsqueeze(0).to(device) # 1 x 256 x 128 x 256
-
+		
 		index = np.array([j])
 		proposals = proposals[index] # B x 4
 		mask_feature = torch.tensor(mask_feature[index]).to(device) # B x 256 x 14 x 14
 
 		batch_sseg_label = torch.zeros((1, 28, 28))
 		batch_prop_boxes = torch.zeros((1, 4))
-
+		
 		x1, y1, x2, y2 = proposals[0]
 		prop_x1 = int(max(round(x1), 0))
 		prop_y1 = int(max(round(y1), 0))
-		prop_x2 = int(min(round(x2), 2048-1))
-		prop_y2 = int(min(round(y2), 1024-1))
+		prop_x2 = int(min(round(x2), 1280-1))
+		prop_y2 = int(min(round(y2), 720-1))
 
 		img_proposal = rgb_img[prop_y1:prop_y2, prop_x1:prop_x2]
 		sseg_label_proposal = sseg_label[prop_y1:prop_y2, prop_x1:prop_x2]
@@ -107,6 +103,20 @@ class LostAndFoundProposalsDataset(data.Dataset):
 		batch_prop_boxes[0, 1] = prop_y1
 		batch_prop_boxes[0, 2] = prop_x2
 		batch_prop_boxes[0, 3] = prop_y2
+		
+		'''
+		# visualize for test
+		fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10,5))
+		ax[0].imshow(img_proposal)
+		ax[0].get_xaxis().set_visible(False)
+		ax[0].get_yaxis().set_visible(False)
+		ax[0].set_title("rgb proposal")
+		ax[1].imshow(sseg_label_proposal, vmin=0.0, vmax=8.0)
+		ax[1].get_xaxis().set_visible(False)
+		ax[1].get_yaxis().set_visible(False)
+		ax[1].set_title("sseg label proposal")
+		plt.show()
+		'''
 
 		# rescale sseg label to 28x28
 		sseg_label_patch = cv2.resize(sseg_label_proposal, (28, 28), interpolation=cv2.INTER_NEAREST) # 28 x 28
@@ -123,7 +133,5 @@ class LostAndFoundProposalsDataset(data.Dataset):
 			patch_feature = mask_feature
 		elif self.rep_style == 'SSeg':
 			patch_feature = batch_sseg_feature
-
-		#print('patch_feature.shape = {}'.format(patch_feature.shape))
 
 		return patch_feature, batch_sseg_label, img_proposal, sseg_label_proposal

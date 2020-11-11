@@ -8,8 +8,10 @@ from dataloaders.cityscapes_proposals import CityscapesProposalsDataset
 from metrics import Evaluator
 
 BATCH_SIZE = 32
-rep_style = 'SSeg' #'both', 'ObjDet', 'SSeg'
+rep_style = 'both' #'both', 'ObjDet', 'SSeg'
 saved_folder = 'trained_model/regular/{}'.format(rep_style)
+
+print('saved_folder = {}'.format(saved_folder))
 
 if rep_style == 'both':
     input_dim = 512
@@ -28,7 +30,7 @@ def train_classifier(train_loader, classifier, criterion, optimizer):
     classifier.train()
     loss_ = 0.0
     epoch_loss = []
-    for i in range(20):#len(train_loader)):
+    for i in range(len(train_loader)):
         images, labels = train_loader[i]
         images, labels = images.to(device), labels.to(device)
 
@@ -47,7 +49,7 @@ def test_classifier(test_loader, classifier, criterion, evaluator):
     with torch.no_grad():
         classifier.eval()
         epoch_loss = []
-        for i in range(20):#len(test_loader)):
+        for i in range(len(test_loader)):
             images, labels = test_loader[i]
             images, labels = images.to(device), labels.to(device)
 

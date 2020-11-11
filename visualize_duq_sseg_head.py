@@ -6,16 +6,24 @@ import matplotlib.pyplot as plt
 from sseg_model import DuqHead
 from dataloaders.cityscapes_proposals import CityscapesProposalsDataset
 from dataloaders.lostAndFound_proposals import LostAndFoundProposalsDataset
+from dataloaders.fishyscapes_proposals import FishyscapesProposalsDataset
+from dataloaders.roadAnomaly_proposals import RoadAnomalyProposalsDataset
 import torch.nn.functional as F
 from utils import apply_color_map
 from scipy.stats import entropy
 from scipy.special import softmax
 
 style = 'duq'
-dataset = 'lostAndFound' #'cityscapes'
-rep_style = 'ObjDet'
+dataset = 'roadAnomaly' #'lostAndFound', 'cityscapes', 'fishyscapes'
+rep_style = 'both' #'both', 'ObjDet', 'SSeg' 
 saved_folder = 'visualization/obj_sseg_{}/{}/{}'.format(style, rep_style, dataset)
-trained_model_dir = 'trained_model/{}'.format(style)
+trained_model_dir = 'trained_model/{}/{}'.format(style, rep_style)
+
+# check if folder exists
+if not os.path.exists('visualization/obj_sseg_duq/{}'.format(rep_style)): 
+    os.mkdir('visualization/obj_sseg_duq/{}'.format(rep_style))
+if not os.path.exists(saved_folder): 
+    os.mkdir(saved_folder)
 
 if dataset == 'cityscapes':
 	dataset_folder = '/projects/kosecka/yimeng/Datasets/Cityscapes'
@@ -23,6 +31,12 @@ if dataset == 'cityscapes':
 elif dataset == 'lostAndFound':
 	dataset_folder = '/projects/kosecka/yimeng/Datasets/Lost_and_Found'
 	ds_val = LostAndFoundProposalsDataset(dataset_folder, rep_style=rep_style)
+elif dataset == 'fishyscapes':
+	dataset_folder = '/projects/kosecka/yimeng/Datasets/Fishyscapes_Static'
+	ds_val = FishyscapesProposalsDataset(dataset_folder, rep_style=rep_style)
+elif dataset == 'roadAnomaly':
+	dataset_folder = '/projects/kosecka/yimeng/Datasets/RoadAnomaly'
+	ds_val = RoadAnomalyProposalsDataset(dataset_folder, rep_style=rep_style)
 num_classes = ds_val.NUM_CLASSES
 
 if rep_style == 'both':
@@ -33,7 +47,7 @@ else:
 device = torch.device('cuda')
 
 classifier = DuqHead(num_classes, input_dim).to(device)
-classifier.load_state_dict(torch.load('{}/{}_classifier_0.1.pth'.format(trained_model_dir, style)))
+classifier.load_state_dict(torch.load('{}/{}_classifier_0.0.pth'.format(trained_model_dir, style)))
 #assert 1==2
 
 with torch.no_grad():
@@ -42,6 +56,10 @@ with torch.no_grad():
 			num_proposals = 10
 		elif dataset == 'lostAndFound':
 			num_proposals = ds_val.get_num_proposal(i)
+		elif dataset == 'fishyscapes':
+			num_proposals = ds_val.get_num_proposal(i)
+		elif dataset == 'roadAnomaly':
+			num_proposals = 20
 		
 		for j in range(num_proposals):
 			print('i = {}, j = {}'.format(i, j))
@@ -59,6 +77,12 @@ with torch.no_grad():
 			sseg_pred = sseg_pred.cpu().numpy()[0]
 
 			uncertainty = 1.0 - np.amax(logits, axis=0)
+
+			# ignore uncertainty on the background pixels
+			uncertainty[sseg_pred == 0] = 0 # road
+			uncertainty[sseg_pred == 1] = 0 # building
+			uncertainty[sseg_pred == 3] = 0 # vegetation
+			uncertainty[sseg_pred == 4] = 0 # sky
 
 			if dataset == 'cityscapes':
 				color_sseg_label_proposal = apply_color_map(sseg_label_proposal)

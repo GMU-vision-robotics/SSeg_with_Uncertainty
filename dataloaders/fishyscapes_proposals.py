@@ -12,13 +12,13 @@ from torchvision.ops import roi_align
 
 device = torch.device('cuda')
 
-class LostAndFoundProposalsDataset(data.Dataset):
+class FishyscapesProposalsDataset(data.Dataset):
 	def __init__(self, dataset_dir, rep_style='both'):
 
 		self.dataset_dir = dataset_dir
 		self.rep_style = rep_style
 
-		self.data_json_file = json.load(open('{}/{}_data_annotation.json'.format(self.dataset_dir, 'Lost_and_Found')))
+		self.data_json_file = json.load(open('{}/{}_data_annotation.json'.format(self.dataset_dir, 'Fishyscapes_Static')))
 
 		self.void_classes = [0, 1, 2, 3, 4, 5, 10, 14, 15, 16, -1]
 		self.valid_classes = [7, 11, 17, 21, 23, 24, 26, 31]
@@ -32,9 +32,9 @@ class LostAndFoundProposalsDataset(data.Dataset):
 		print("Found {} images".format(len(self.data_json_file)))
 
 		# proposal, mask feature and sseg feature folder
-		self.proposal_folder = '/scratch/yli44/detectron2/my_projects/Bayesian_MaskRCNN/generated_proposals/lostAndFound'
-		self.mask_ft_folder  = '/scratch/yli44/detectron2/my_projects/Bayesian_MaskRCNN/proposal_mask_features/lostAndFound'
-		self.sseg_ft_folder  = '/projects/kosecka/yimeng/Datasets/Lost_and_Found/deeplab_ft_8_classes'
+		self.proposal_folder = '/scratch/yli44/detectron2/my_projects/Bayesian_MaskRCNN/generated_proposals/fishyscapes_static'
+		self.mask_ft_folder  = '/scratch/yli44/detectron2/my_projects/Bayesian_MaskRCNN/proposal_mask_features/fishyscapes_static'
+		self.sseg_ft_folder  = '/projects/kosecka/yimeng/Datasets/Fishyscapes_Static/deeplab_ft_8_classes'
 
 	def __len__(self):
 		return len(self.data_json_file)

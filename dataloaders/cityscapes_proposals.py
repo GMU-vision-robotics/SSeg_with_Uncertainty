@@ -55,16 +55,13 @@ class CityscapesProposalsDataset(data.Dataset):
 		proposals = np.load('{}/{}_proposal.npy'.format(self.proposal_folder, i), allow_pickle=True)
 		# read mask features
 		mask_feature = np.load('{}/{}_proposal_mask_features.npy'.format(self.mask_ft_folder, i), allow_pickle=True)
+		#print('mask_feature.shape = {}'.format(mask_feature.shape))
 		# read sseg features
 		sseg_feature = np.load('{}/{}_deeplab_ft.npy'.format(self.sseg_ft_folder, i), allow_pickle=True) # 256 x 128 x 256
 		_, H, W = sseg_feature.shape
 		#print('sseg_feature.shape = {}'.format(sseg_feature.shape))
 
-		sseg_feature = torch.tensor(sseg_feature).unsqueeze(0).to(device)
-		#sseg_feature = torch.tensor(sseg_feature).unsqueeze(0) # 1 x 256 x 128 x 256
-		#sseg_feature = F.interpolate(sseg_feature, size=(H*4, W*4), mode='bilinear', align_corners=False).squeeze(0).numpy()
-		#print('sseg_feature.shape = {}'.format(sseg_feature.shape))
-		#assert 1==2
+		sseg_feature = torch.tensor(sseg_feature).unsqueeze(0).to(device) # 1 x 256 x 128 x 256
 
 		index = np.random.choice(100, self.batch_size, replace=False)
 		#index = np.array([0,1,2])
@@ -106,20 +103,6 @@ class CityscapesProposalsDataset(data.Dataset):
 			ax[1].set_title("sseg label")
 			plt.show()
 			'''
-
-			# sseg feature size is 1/8 of the original image size
-			#sseg_x1 = prop_x1//2
-			#sseg_y1 = prop_y1//2
-			#sseg_x2 = max(prop_x2//2, sseg_x1+2)
-			#sseg_y2 = max(prop_y2//2, sseg_y1+2)
-			#print('sseg_x1 = {}, sseg_y1 = {}, sseg_x2 = {}, sseg_y2 = {}'.format(sseg_x1, sseg_y1, sseg_x2, sseg_y2))
-
-			# rescale patch_sseg_feature to 14x14
-			#patch_sseg_feature = torch.tensor(sseg_feature[:, sseg_y1:sseg_y2, sseg_x1:sseg_x2]).unsqueeze(0) # 1 x 256 x prop_h/2 x prop_w/2
-			#print('patch_sseg_feature.shape = {}'.format(patch_sseg_feature.shape))
-			#patch_sseg_feature = F.interpolate(patch_sseg_feature, size=(14, 14), mode='bilinear', align_corners=False) # 1 x 256 x 14 x 14
-			#print('patch_sseg_feature.shape = {}'.format(patch_sseg_feature.shape))
-			#batch_sseg_feature[j] = patch_sseg_feature
 
 			# rescale sseg label to 28x28
 			sseg_label_patch = cv2.resize(sseg_label_patch, (28, 28), interpolation=cv2.INTER_NEAREST) # 28 x 28
@@ -185,20 +168,14 @@ class CityscapesProposalsDataset(data.Dataset):
 		_, H, W = sseg_feature.shape
 		#print('sseg_feature.shape = {}'.format(sseg_feature.shape))
 
-		sseg_feature = torch.tensor(sseg_feature).unsqueeze(0) # 1 x 256 x 128 x 256
-		sseg_feature = F.interpolate(sseg_feature, size=(H*4, W*4), mode='bilinear', align_corners=False).squeeze(0).numpy()
-
+		sseg_feature = torch.tensor(sseg_feature).unsqueeze(0).to(device) # 1 x 256 x 128 x 256
+		
 		index = np.array([j])
 		proposals = proposals[index] # B x 4
-		mask_feature = torch.tensor(mask_feature[index]) # B x 256 x 14 x 14
+		mask_feature = torch.tensor(mask_feature[index]).to(device) # B x 256 x 14 x 14
 
-		#print('proposals.shape = {}'.format(proposals.shape))
-		#print('mask_feature.shape = {}'.format(mask_feature.shape))
-		#assert 1==2
-
-		batch_sseg_feature = torch.zeros((1, 256, 14, 14))
-		batch_sseg_label   = torch.zeros((1, 28, 28))
-
+		batch_sseg_label = torch.zeros((1, 28, 28))
+		batch_prop_boxes = torch.zeros((1, 4))
 		
 		x1, y1, x2, y2 = proposals[0]
 		prop_x1 = int(max(round(x1), 0))
@@ -208,6 +185,11 @@ class CityscapesProposalsDataset(data.Dataset):
 
 		img_proposal = rgb_img[prop_y1:prop_y2, prop_x1:prop_x2]
 		sseg_label_proposal = sseg_label[prop_y1:prop_y2, prop_x1:prop_x2]
+
+		batch_prop_boxes[0, 0] = prop_x1
+		batch_prop_boxes[0, 1] = prop_y1
+		batch_prop_boxes[0, 2] = prop_x2
+		batch_prop_boxes[0, 3] = prop_y2
 		
 		'''
 		# visualize for test
@@ -223,25 +205,14 @@ class CityscapesProposalsDataset(data.Dataset):
 		plt.show()
 		'''
 
-		# sseg feature size is 1/8 of the original image size
-		sseg_x1 = prop_x1//2
-		sseg_y1 = prop_y1//2
-		sseg_x2 = max(prop_x2//2, sseg_x1+2)
-		sseg_y2 = max(prop_y2//2, sseg_x2+2)
-		#print('sseg_x1 = {}, sseg_y1 = {}, sseg_x2 = {}, sseg_y2 = {}'.format(sseg_x1, sseg_y1, sseg_x2, sseg_y2))
-
-		# rescale patch_sseg_feature to 14x14
-		patch_sseg_feature = torch.tensor(sseg_feature[:, sseg_y1:sseg_y2, sseg_x1:sseg_x2]).unsqueeze(0) # 1 x 256 x prop_h/2 x prop_w/2
-		#print('patch_sseg_feature.shape = {}'.format(patch_sseg_feature.shape))
-		patch_sseg_feature = F.interpolate(patch_sseg_feature, size=(14, 14), mode='bilinear', align_corners=False) # 1 x 256 x 14 x 14
-		#print('patch_sseg_feature.shape = {}'.format(patch_sseg_feature.shape))
-		batch_sseg_feature[0] = patch_sseg_feature
-
 		# rescale sseg label to 28x28
 		sseg_label_patch = cv2.resize(sseg_label_proposal, (28, 28), interpolation=cv2.INTER_NEAREST) # 28 x 28
 		sseg_label_patch = sseg_label_patch.astype('int')
 		#print('sseg_label_patch = {}'.format(sseg_label_patch))
 		batch_sseg_label[0] = torch.tensor(sseg_label_patch)
+
+		batch_prop_boxes = batch_prop_boxes.to(device)
+		batch_sseg_feature = roi_align(sseg_feature, [batch_prop_boxes], output_size=(14, 14), spatial_scale=1/8.0)
 
 		if self.rep_style == 'both':
 			patch_feature = torch.cat((mask_feature, batch_sseg_feature), dim=1) # B x 512 x 14 x 14
@@ -255,4 +226,5 @@ class CityscapesProposalsDataset(data.Dataset):
 '''
 cityscapes_train = CityscapesProposalsDataset('/projects/kosecka/yimeng/Datasets/Cityscapes', 'train')
 a = cityscapes_train[1]
+#b = cityscapes_train.get_proposal(0, 2)
 '''

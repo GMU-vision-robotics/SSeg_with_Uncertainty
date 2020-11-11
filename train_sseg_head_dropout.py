@@ -8,8 +8,10 @@ from dataloaders.cityscapes_proposals import CityscapesProposalsDataset
 from metrics import Evaluator
 
 BATCH_SIZE = 32
-rep_style = 'ObjDet' #'both', 'ObjDet', 'SSeg'
-saved_folder = 'trained_model/dropout'
+rep_style = 'both' #'both', 'ObjDet', 'SSeg'
+saved_folder = 'trained_model/dropout/{}'.format(rep_style)
+
+print('saved_folder = {}'.format(saved_folder))
 
 if rep_style == 'both':
     input_dim = 512
@@ -79,7 +81,7 @@ criterion = nn.CrossEntropyLoss(ignore_index=255).to(device)
 
 import torch.optim as optim
 optimizer = optim.SGD(classifier.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3)
 
 evaluator = Evaluator(num_classes)
 

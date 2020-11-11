@@ -11,10 +11,16 @@ from utils import apply_color_map
 from scipy.stats import entropy
 from scipy.special import softmax
 
-dataset = 'lostAndFound' #'cityscapes'
-rep_style = 'ObjDet'
+dataset = 'cityscapes' #'lostAndFound' #'cityscapes'
+rep_style = 'both' #'SSeg', 'ObjDet'
 saved_folder = 'visualization/obj_sseg_regular/{}/{}'.format(rep_style, dataset)
-trained_model_dir = 'trained_model/regular'
+trained_model_dir = 'trained_model/regular/{}'.format(rep_style)
+
+# check if folder exists
+if not os.path.exists('visualization/obj_sseg_regular/{}'.format(rep_style)): 
+    os.mkdir('visualization/obj_sseg_regular/{}'.format(rep_style))
+if not os.path.exists(saved_folder): 
+    os.mkdir(saved_folder)
 
 if dataset == 'cityscapes':
 	dataset_folder = '/projects/kosecka/yimeng/Datasets/Cityscapes'
@@ -34,10 +40,13 @@ device = torch.device('cuda')
 classifier = SSegHead(num_classes, input_dim).to(device)
 classifier.load_state_dict(torch.load('{}/regular_classifier.pth'.format(trained_model_dir)))
 
+#print('aaaaaaaaaaaaaa')
+#ssert 1==2
+
 with torch.no_grad():
 	for i in range(len(ds_val)):
 		if dataset == 'cityscapes':
-			num_proposals = 10
+			num_proposals = 2
 		elif dataset == 'lostAndFound':
 			num_proposals = ds_val.get_num_proposal(i)
 		
@@ -88,5 +97,5 @@ with torch.no_grad():
 			plt.close()
 		
 
-		assert 1==2
+		#assert 1==2
 

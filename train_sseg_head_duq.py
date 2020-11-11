@@ -9,9 +9,11 @@ from metrics import Evaluator
 from loss import BinaryCrossEntropyLoss
 
 BATCH_SIZE = 8
-rep_style = 'ObjDet' #'both', 'ObjDet', 'SSeg'
-saved_folder = 'trained_model/duq'
+rep_style = 'both' #'both', 'ObjDet', 'SSeg'
+saved_folder = 'trained_model/duq/{}'.format(rep_style)
 duq_l_gradient_penalty = 0.0
+
+print('saved_folder = {}'.format(saved_folder))
 
 if rep_style == 'both':
     input_dim = 512
@@ -96,7 +98,7 @@ classifier = DuqHead(num_classes, input_dim).to(device)
 
 import torch.optim as optim
 optimizer = optim.SGD(classifier.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=3)
 
 evaluator = Evaluator(num_classes)
 
